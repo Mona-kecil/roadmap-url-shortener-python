@@ -15,8 +15,8 @@ Best run using [uv](https://astral.sh)
 
 # Roadmaps
 - [x] Create persistent data storage (SQLite3).
-- [ ] Abstract SQL command (create, read, update, delete) to add/modify/delete url.
-- [ ] Implement soft-deletion.
+- [x] Abstract SQL command (create, read, update, delete) to add/modify/delete url.
+- [x] Implement soft-deletion.
 - [ ] Implement create route.
     - [ ] Make it idempotent.
     - [ ] Implement rate-limiting using Redis.
@@ -33,3 +33,4 @@ Best run using [uv](https://astral.sh)
 - [ ] Implement delete route.
     - [ ] Perform soft-delete.
     - [ ] Implement error handling.
+- [ ] Cache newly posted urls with TTL of 5 minutes.
