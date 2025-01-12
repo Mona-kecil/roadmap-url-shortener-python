@@ -1,6 +1,7 @@
 import json
+from typing import Annotated
 
-from fastapi import FastAPI, status, HTTPException, Header, Request
+from fastapi import FastAPI, status, HTTPException, Header, Request, Path
 from fastapi.responses import JSONResponse
 import redis
 
@@ -30,19 +31,18 @@ async def shorten_url(
     client_id = f"{request.client.host}:{request.client.port}"
     key = f"rate_limit:{client_id}"
 
-    request_count = redis_client.get(key)
-
-    if request_count is None:
-        redis_client.set(key, 1, ex=RATE_LIMIT_WINDOW)
+    if redis_client.exists(key):
+        request_count = int(redis_client.get(key))
     else:
-        request_count = int(request_count)
-        if request_count >= RATE_LIMIT_COUNT:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Rate limit exceeded. Try again later."
-            )
-        else:
-            redis_client.incr(key)
+        request_count = int(redis_client.set(key, 1, ex=RATE_LIMIT_WINDOW))
+
+    if request_count >= RATE_LIMIT_COUNT:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded. Try again later."
+        )
+
+    redis_client.incr(key)
 
     shorten: dict = db.create_new_entry(url, shortened_url)
     cache = shorten.copy()
@@ -51,9 +51,19 @@ async def shorten_url(
     redis_client.set(idempotency_key, json.dumps(
         cache), ex=RATE_LIMIT_WINDOW)
 
-    return JSONResponse(status_code=status.HTTP_201_CREATED, content=shorten, media_type="application/json")
+    return JSONResponse(
+        status_code=status.HTTP_201_CREATED,
+        content=shorten,
+        media_type="application/json"
+    )
 
 
-@app.get('/')
-def test_get_client(request: Request):
-    return JSONResponse(status_code=status.HTTP_200_OK, content=f"{request.client.host}:{request.client.port}")
+@app.get("/shorten/{shortened_url}")
+async def read_url(
+    request: Request,
+    shortened_url: Annotated[str, Path(title="Shortened URL")]
+):
+    return JSONResponse(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        content={"message": "Not implemented"},
+    )
