@@ -19,7 +19,7 @@ Best run using [uv](https://astral.sh)
 - [x] Implement soft-deletion.
 - [x] Implement create route.
     - [x] Make it idempotent.
-    - [ ] Implement rate-limiting using Redis.
+    - [x] Implement rate-limiting using Redis.
     - [ ] Implement error handling.
 - [ ] Implement read route.
     - [ ] Implement analytics using Redis.
