@@ -19,6 +19,12 @@ CACHE_TTL = 300  # seconds
 
 @app.middleware("http")
 async def cache_middleware(request: Request, call_next):
+    if request.url.path != "/shorten":
+        return await call_next(request)
+
+    if request.method != "GET":
+        return await call_next(request)
+
     unique_key = request.state.unique_key
     if unique_key is None:
         return await call_next(request)
@@ -38,32 +44,49 @@ async def cache_middleware(request: Request, call_next):
 
 @app.middleware("http")
 async def idempotency_middleware(request: Request, call_next):
-    original_url = str(request.url.path)
-    if request.url.query:
-        original_url += f"?{request.url.query}"
+    if request.url.path != "/shorten":
+        return await call_next(request)
 
-    urls = original_url.split('?')
-    queries = urls[0].split('&')
-    print(urls)
-    print(queries)
+    if request.method in ["PATCH", "POST"]:
+        return await call_next(request)
 
-    key = f"{request.client.host}:{request.client.port}:{original_url}"
-    print(key)
-
-    unique_key = generate_short_hash(input_string=key)
+    unique_key = request.state.unique_key
     if redis_client.exists(unique_key):
         data = json.loads(redis_client.get(unique_key))
         data["message"] = "Already shortened."
         return JSONResponse(status_code=status.HTTP_201_CREATED,
                             content=data,
                             media_type="application/json")
-    request.state.unique_key = unique_key
+
     response = await call_next(request)
     return response
 
 
 @app.middleware("http")
+async def set_unique_key_middleware(request: Request, call_next):
+    if request.url.path != "/shorten":
+        return await call_next(request)
+
+    original_url = str(request.url.path)
+    if request.url.query:
+        original_url += f"?{request.url.query}"
+
+    routes = original_url.split('?')
+    route, query = routes[0], routes[1].split('&')[1]
+
+    url = f"{route}?{query}"
+
+    key = f"{request.client.host}:{request.client.port}:{url}"
+    request.state.unique_key = generate_short_hash(input_string=key)
+
+    return await call_next(request)
+
+
+@app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
+    if request.url.path != "/shorten":
+        return await call_next(request)
+
     client_id = f"{request.client.host}:{request.client.port}"
     key = f"rate_limit:{client_id}"
 
@@ -115,7 +138,19 @@ async def read_url(
     request: Request,
     shortened_url: Annotated[str, Path(title="Shortened URL")]
 ):
-    data = db.get_entry(shortened_url)
+    try:
+        data = db.get_entry(shortened_url)
+    except Exception as e:
+        print(e)
+        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND,
+                            content={"error": "URL not found"},
+                            media_type="application/json")
+
+    unique_key = request.state.unique_key
+    redis_client.set(unique_key,
+                     json.dumps(data),
+                     ex=CACHE_TTL)
+
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
         content=data,

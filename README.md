@@ -20,7 +20,7 @@ Best run using [uv](https://astral.sh)
 - [x] Implement create route.
     - [x] Make it idempotent.
     - [x] Implement rate-limiting using Redis.
-    - [ ] Implement error handling.
+    - [x] Implement error handling.
 - [ ] Implement read route.
     - [ ] Implement analytics using Redis.
         - [ ] How many times have the url been queried?
