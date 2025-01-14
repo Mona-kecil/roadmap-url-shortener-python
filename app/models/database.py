@@ -48,6 +48,23 @@ def create_new_entry(
         return dict(data)
 
 
+def increment_views(shortened_url: str) -> dict:
+    with get_connection() as conn:
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE urls
+            SET views = views + 1
+            WHERE shortened_url = ?
+            AND deleted_at IS NULL
+            RETURNING *;
+            """, (shortened_url,)
+        )
+        data = cursor.fetchone()
+        conn.commit()
+        return dict(data)
+
+
 def batch_create_new_entries(
     original_urls: list[str],
     shortened_urls: list[str] = None
@@ -85,12 +102,11 @@ def get_entry(shortened_url: str):
 def get_all_entries():
     with get_connection() as conn:
         cursor = conn.cursor()
-
         cursor.execute("""
             SELECT * FROM urls
             WHERE deleted_at IS NULL
             """)
-        return dict(cursor.fetchall())
+        return [dict(row) for row in cursor.fetchall()]
 
 
 def update_entry(id: int, original_url: str, shortened_url: str):

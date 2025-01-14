@@ -14,6 +14,7 @@ def initialize_structure():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 original_url TEXT NOT NULL,
                 shortened_url TEXT NOT NULL,
+                views INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP,
                 deleted_at TIMESTAMP
