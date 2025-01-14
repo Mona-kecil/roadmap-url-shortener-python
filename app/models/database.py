@@ -70,16 +70,16 @@ def batch_create_new_entries(
         return dict(data)
 
 
-def get_entry_by_id(id: int):
+def get_entry(shortened_url: str):
     with get_connection() as conn:
         cursor = conn.cursor()
 
         cursor.execute("""
-            SELECT * FROM urls WHERE id = ?
+            SELECT * FROM urls WHERE shortened_url = ?
             AND deleted_at IS NULL
-            """, (id,)
+            """, (shortened_url,)
         )
-        return cursor.fetchone()
+        return dict(cursor.fetchone())
 
 
 def get_all_entries():
@@ -90,7 +90,7 @@ def get_all_entries():
             SELECT * FROM urls
             WHERE deleted_at IS NULL
             """)
-        return cursor.fetchall()
+        return dict(cursor.fetchall())
 
 
 def update_entry(id: int, original_url: str, shortened_url: str):
