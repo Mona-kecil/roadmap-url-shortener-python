@@ -103,7 +103,6 @@ async def set_unique_key_middleware(request: Request, call_next):
 
     url = f"{route}?{query}"
 
-    print(url)
     key = f"{request.client.host}:{request.client.port}:{url}"
 
     unique_key = generate_short_hash(input_string=key)
@@ -114,6 +113,8 @@ async def set_unique_key_middleware(request: Request, call_next):
 
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
+    if not request.url.path.startswith("/shorten"):
+        return await call_next(request)
 
     client_id = f"{request.client.host}:{request.client.port}"
     key = f"rate_limit:{client_id}"
@@ -195,7 +196,8 @@ async def get_url(
         db.increment_views(shortened_url)
     except Exception as e:
         print(e)
-        return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            content="Internal server error")
 
     return RedirectResponse(url=data['shortened_url'],
                             status_code=status.HTTP_307_TEMPORARY_REDIRECT)
@@ -217,11 +219,41 @@ async def get_url_stats(
 
 @app.patch('/shorten/{shortened_url}')
 async def update_shortened_url(
+    request: Request,
     shortened_url: Annotated[str, Path(title="Shortened URL")],
-    new_original_url: str | None,
-    new_shortened_url: str | None = None
+    new_original_url: str,
 ):
-    pass
+    try:
+        data = db.update_entry(new_original_url, shortened_url)
+    except Exception as e:
+        print(e)
+        return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            content="Internal server error")
+
+    unique_key = request.state.unique_key
+    redis_client.set(unique_key,
+                     json.dumps(data),
+                     ex=CACHE_TTL)
+
+    return JSONResponse(status_code=status.HTTP_200_OK, content=data)
+
+
+@app.delete('/shorten/{shortened_url}')
+async def delete_shortened_url(
+    request: Request,
+    shortened_url: Annotated[str, Path(title="Shortened URL")]
+):
+    try:
+        data = db.delete_entry(shortened_url)
+    except Exception as e:
+        print(e)
+        return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            content="Internal server error")
+
+    unique_key = request.state.unique_key
+    redis_client.delete(unique_key)
+
+    return JSONResponse(status_code=status.HTTP_200_OK, content=data)
 
 
 @app.get("/redis")
