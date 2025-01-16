@@ -109,36 +109,34 @@ def get_all_entries():
         return [dict(row) for row in cursor.fetchall()]
 
 
-def update_entry(id: int, original_url: str, shortened_url: str):
+def update_entry(original_url: str, shortened_url: str):
     with get_connection() as conn:
         cursor = conn.cursor()
-
         cursor.execute("""
             UPDATE urls
             SET
                 original_url = ?,
-                shortened_url = ?
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE shortened_url = ?
             AND deleted_at IS NULL
             RETURNING *;
-            """, (original_url, shortened_url, id)
+            """, (original_url, shortened_url)
         )
         data = cursor.fetchone()
         conn.commit()
         return dict(data)
 
 
-def delete_entry(id: int):
+def delete_entry(shortened_url: str):
     with get_connection() as conn:
         cursor = conn.cursor()
 
         cursor.execute("""
             UPDATE urls
             SET deleted_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE shortened_url = ?
             RETURNING *;
-            """, (id,)
+            """, (shortened_url,)
         )
         data = cursor.fetchone()
         conn.commit()
