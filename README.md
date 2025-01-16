@@ -1,5 +1,5 @@
 # Simple RESTful url shortener
-project links: https://roadmap.sh/projects/url-shortening-service
+project link: https://roadmap.sh/projects/url-shortening-service
 
 # Overview
 I wanna try to tackle this project using Redis.
@@ -8,9 +8,13 @@ I wanna try to tackle this project using Redis.
 # How to run
 Best run using [uv](https://astral.sh)
 - Spin up Redis server on default port
-- Create virtual environment with python version >= 3.13.0
+- Create virtual environment with python version listed in .pythonversion
 - Install dependencies
-- Run main.py on src/main.py
+- Run ASGI server on app.main:app (I'm using uvicorn)
+- ```bash
+  PYTHONPATH=$(pwd) uvicorn app.main:app
+  ```
+- Go to localhost:port/docs to play with the API
 
 
 # Roadmaps
